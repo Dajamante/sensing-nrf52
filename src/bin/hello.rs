@@ -6,27 +6,12 @@ use sensing_nrf52 as _; // global logger + panicking-behavior + memory layout
 use nrf52840_hal::{
     self as hal,
     gpio::{p0::Parts as P0Parts, Input, Level, Output, Pin, PullUp, PushPull},
-    prelude::{InputPin,OutputPin},
+    prelude::{InputPin, OutputPin},
     Timer,
 };
 
-use embedded_hal::{
-    blocking::delay::DelayUs,
-};
+use embedded_hal::{blocking::delay::DelayMs, blocking::delay::DelayUs};
 
-// what are the field in this block and how is it called?
-pub struct SensorBlock {
-    pub trig: Pin<Output<PushPull>>,
-    pub echo: Pin<Input<PullUp>>,
-    pub btn: Pin<Input<PullUp>>,
-}
-
-impl SensorBlock{
-    pub fn new(trig:Pin<Output<PushPull>>, echo:Pin<Input<PullUp>>, btn:Pin<Input<PullUp>>) -> Self {
-        SensorBlock {trig : trig, echo : echo, btn : btn}
-        // how can I return a block of a specific type?
-    }
-}
 #[cortex_m_rt::entry]
 fn main() -> ! {
     defmt::info!("Hello, world!");
@@ -38,18 +23,25 @@ fn main() -> ! {
     let mut echo = pins.p0_04.into_pullup_input().degrade();
     let mut btn = pins.p0_11.into_pullup_input().degrade();
 
-    let mut sensy = SensorBlock::new(trig, echo, btn);
     // here should be if btn.is_low() { // set trigger, check what is sent from the echo}
     // if not unwrap :
     // mismatched types
     // expected `bool`, found enum `core::result::Result`
     // note: expected type `bool`
     // found enum `core::result::Result<bool, void::Void>`rustc(E0308)
-    if btn.is_low().unwrap(){
-        trig.set_high().unwrap();
-        timer.delay_us(1000u32);
-
-
+    loop {
+        if btn.is_low().unwrap() {
+            timer.delay_ms(1000u32);
+            trig.set_high().unwrap();
+            timer.delay_ms(10u32);
+            trig.set_low().unwrap();
+            defmt::info!("button pushed");
+            let mut time_a = timer.read();
+            defmt::info!("{=u32}", time_a);
+            //while echo.is_high().unwrap() {}
+            let mut time_b = timer.read();
+            defmt::info!("{=u32}", time_b - time_a);
+        }
     }
     sensing_nrf52::exit()
 }
