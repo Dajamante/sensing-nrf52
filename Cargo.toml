@@ -17,6 +17,8 @@ panic-probe = { version = "0.2.0", features = ["print-defmt"] }
 # TODO(4) enter your HAL here
 nrf52840-hal = "0.12.0"
 embedded-hal = "0.2.4"
+groundhog = "0.2.5"              # A rolling timer abstraction
+groundhog-nrf52 = "0.3.0"        # A rolling timer abstraction for the nrf52
 
 [features]
 # set logging levels here
