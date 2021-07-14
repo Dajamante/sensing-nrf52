@@ -3,49 +3,40 @@
 
 use sensing_nrf52 as _; // global logger + panicking-behavior + memory layout
 
-// this is for nop if I need it
-
-use groundhog::RollingTimer;
-use groundhog_nrf52::GlobalRollingTimer;
+use defmt::unwrap;
 use nrf52840_hal::{
     self as hal,
     gpio::{p0::Parts as P0Parts, Level},
     prelude::*,
+    Timer,
 };
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    let board = hal::pac::Peripherals::take().unwrap();
+    defmt::info!("Entering main and doing config");
+
+    // comment on the unwrap! macro
+    let board = unwrap!(hal::pac::Peripherals::take());
     let pins = P0Parts::new(board.P0);
-    GlobalRollingTimer::init(board.TIMER0);
-    let timer = GlobalRollingTimer::new();
     let mut trig = pins.p0_03.into_push_pull_output(Level::Low).degrade();
-    let echo = pins.p0_04.into_pullup_input().degrade();
+    let echo = pins.p0_04.into_pulldown_input().degrade();
 
-    let threshold = 100;
-    // the bigger loop
+    let mut timer = Timer::new(board.TIMER0);
+    let threshold = 100_000;
     'outer: loop {
-        let start = timer.get_ticks();
         trig.set_high().unwrap();
-        while timer.micros_since(start) < 10 {}
+        timer.delay_us(10u32);
         trig.set_low().ok();
-
+        timer.start(1_000_000_u32);
         while echo.is_low().unwrap() {
-            if timer.millis_since(start) > threshold {
-                defmt::warn!("We froze, restart");
-                trig.set_high().unwrap();
+            if timer.read() > threshold {
+                defmt::warn!("Threshold exceeded, restart");
                 continue 'outer;
             }
         }
-        let start_pulse: u32 = timer.get_ticks();
-
+        timer.start(1_000_000u32);
         while echo.is_high().unwrap() {}
-        let length = timer.micros_since(start_pulse);
-
+        let length = timer.read();
         defmt::info!("{=u32} : Estimated distance", length / 58);
-
-        // Blocking wait to allow human reading
-        while timer.millis_since(start) <= 100 {}
     }
-    //sensing_nrf52::exit()
 }
