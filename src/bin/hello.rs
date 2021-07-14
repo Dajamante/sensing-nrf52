@@ -13,13 +13,11 @@ use nrf52840_hal::{
 
 #[cortex_m_rt::entry]
 fn main() -> ! {
-    defmt::info!("Entering main and doing config");
-
     // comment on the unwrap! macro
     let board = unwrap!(hal::pac::Peripherals::take());
     let pins = P0Parts::new(board.P0);
     let mut trig = pins.p0_03.into_push_pull_output(Level::Low).degrade();
-    let echo = pins.p0_04.into_pulldown_input().degrade();
+    let echo = pins.p0_04.into_floating_input().degrade();
 
     let mut timer = Timer::new(board.TIMER0);
     let threshold = 100_000;
